@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as n}from"./chunks/framework.BZemHgQ6.js";const _=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"fe/engineering/git.md","filePath":"fe/engineering/git.md"}'),r={name:"fe/engineering/git.md"};function a(i,o,s,c,f,g){return n(),t("div")}const d=e(r,[["render",a]]);export{_ as __pageData,d as default};
