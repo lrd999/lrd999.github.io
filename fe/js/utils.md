@@ -205,10 +205,9 @@ class EventBus {
 
   /** 移除监听器，listener 不传则移除该事件的所有监听器 */
   off(name, listener) {
-    const list = this.store.get(name)
-    if (!list) return
     if (listener) {
-      list.delete(listener)
+      const list = this.store.get(name)
+      list && list.delete(listener)
     } else {
       this.store.delete(name)
     }
@@ -217,7 +216,7 @@ class EventBus {
   /** 触发事件 */
   emit(name, ...args) {
     const list = this.store.get(name)
-    if (!list) return
+    if (!list?.size) return
     list.forEach(listener => {
       try {
         listener(...args)

@@ -19,51 +19,96 @@
 - `watchDebounced`：防抖 watch。
 - ...
 
-## v-resize 指令
+## 组件二次封装
 
-使用 ResizeObserver 监听元素的尺寸变化，变化后运行传入的函数。
+有时组件提供的接口并不一定满足我们的需求，这时我们可以通过对组件库组件的二次封装，来满足我们特殊的需求。
 
-```js
-import { throttle } from 'lodash'
+对于封装组件有一个大原则就是我们应该尽量保持原有组件的接口，除了我们需要封装的功能外，也保持原有组件提供的接口不变，如 props、events、slots。
 
-export default {
-  mounted(el, binding) {
-    const throttleDelay = binding.arg || 100 // 默认节流时间为100ms，可以通过指令参数传递
-    const callback = throttle(binding.value, throttleDelay)
+可以使用 Vue 提供的一些 api 实现透传，即传递过来的属性、事件等原封不动的传递到原组件中。
 
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        callback(entry.contentRect)
-      }
-    })
+**Props、Events 等**
 
-    resizeObserver.observe(el)
-    el._resizeObserver = resizeObserver
-  },
-  unmounted(el) {
-    if (el._resizeObserver) {
-      el._resizeObserver.disconnect()
-      delete el._resizeObserver
-    }
-  },
-}
-```
-
-使用
+- 模板中使用 `$attrs` 获取所有未接收的属性（指未显示声明的 props）和事件。
+- script 中使用 `useAttrs`。
 
 ```vue
 <template>
-  <div v-resize="handleResize"></div>
-  <!-- 自定义节流时间 -->
-  <div v-resize:200="handleResize"></div>
+  <!-- 将所有属性透传给 el-input -->
+  <el-input v-bind="$attrs" />
+</template>
+```
+
+**插槽**
+
+- 模板中使用 `$slots` 获取所有的插槽，它是一个对象，属性名为插槽名，属性值为插槽函数。
+- script 中使用 `useSlots` 获取。
+
+```vue
+<template>
+  <!-- 循环所有的插槽，并传递给 el-input -->
+  <el-input>
+    <template v-for="(, name) in $slots" #[name]>
+      <slot :name="name" />
+    </template>
+  </el-input>
+</template>
+```
+
+**实例方法**
+
+通常使用 ref 获取实例时，是想使用其方法，定义一个对象，将实例暴露的属性循环添加进对象中，再将此对象对外暴露即可。
+
+```vue
+<template>
+  <!-- 为 el-input 添加阴影 -->
+  <ElInput ref="inputRef" />
 </template>
 
 <script setup>
-import vResize from '@/directives/v-resize.js'
+import { onMounted, reactive, useTemplateRef } from 'vue'
 
-const handleResize = rect => {
-  console.log(rect.width, rect.height)
-}
+const inputRef = useTemplateRef('inputRef')
+const inputExpose = reactive({})
+
+onMounted(() => {
+  for (const key in inputRef.value) {
+    inputExpose[key] = inputRef.value[key]
+  }
+})
+
+defineExpose(inputExpose)
+</script>
+```
+
+综上，封装组件即可实现属性、事件、插槽透传。以下是一个二次封装 `el-input` 的例子。
+
+```vue
+<template>
+  <!-- 绑定 ref，透传属性和事件 -->
+  <el-input ref="inputRef" v-bind="$attrs" style="box-shadow: 0 0 12px #ccc">
+    <!-- 传递插槽 -->
+    <template v-for="(, name) in $slots" #[name]>
+      <slot :name="name" />
+    </template>
+  </el-input>
+</template>
+
+<script setup>
+import { onMounted, reactive, useTemplateRef } from 'vue'
+
+const inputRef = useTemplateRef('inputRef')
+const inputExpose = reactive({})
+
+onMounted(() => {
+  // 获取 el-input 实例中暴露的属性
+  for (const key in inputRef.value) {
+    inputExpose[key] = inputRef.value[key]
+  }
+})
+
+// 暴露方法
+defineExpose(inputExpose)
 </script>
 ```
 
@@ -141,77 +186,6 @@ instance.interceptors.response.use(
 )
 
 export default instance
-```
-
-## SortableJS 排序
-
-[SortableJS](https://sortablejs.com/) 是一个功能强大的 JavaScript 拖拽库。
-
-常用配置项
-
-> 查看[完整配置项](https://sortablejs.com/options)
-
-```js
-new Sortable(table, {
-  disabled: false, // 为true时禁用排序功能
-  animation: 150, // 排序动画持续时长（ms）
-  draggable: '.item', // 允许拖拽的项目类名
-  ghostClass: 'sortable-ghost', // 自定义拖拽时的样式类
-  chosenClass: 'sortable-chosen', // 自定义选中时的样式类
-
-  onStart(event) {}, // 拖动开始时触发
-  onEnd(event) {
-    // 拖动结束时触发
-    event.from // 拖动开始时的列表容器
-    event.to // 拖动结束后的列表容器
-    event.oldIndex // 拖动开始前的索引
-    event.newIndex // 拖动结束后的索引
-  },
-})
-```
-
-以下是一个结合 [el-table](https://element-plus.gitee.io/zh-CN/component/table.html) 的示例。
-
-```vue
-<template>
-  <el-table ref="tableRef" :data="tableData" row-key="id">
-    <el-table-column type="index" label="序号" />
-    <!-- 为可拖动排序的列设置类名 -->
-    <el-table-column label="排序" width="60" class-name="drag-cell">
-      <el-icon :size="16"><Rank /></el-icon>
-    </el-table-column>
-    <el-table-column prop="name" label="姓名" />
-    <el-table-column prop="age" label="年龄" />
-  </el-table>
-</template>
-
-<script setup>
-import { ref, reactive, onMounted } from 'vue'
-import Sortable from 'sortablejs'
-
-const tableRef = ref()
-const tableData = reactive([
-  { id: 1, name: '张三', age: 20 },
-  { id: 2, name: '李四', age: 21 },
-  { id: 3, name: '王五', age: 22 },
-  { id: 4, name: '赵六', age: 19 },
-  { id: 5, name: '陈七', age: 20 },
-])
-
-onMounted(() => {
-  const table = tableRef.value.$el.querySelector('.el-table__body-wrapper tbody')
-  new Sortable(table, {
-    draggable: '.drag-cell', // 允许拖拽的元素类名
-    // 结束拖拽时触发
-    onEnd: event => {
-      // 删除被拖动的元素
-      const moveRow = tableData.splice(event.oldIndex, 1)[0]
-      // 添加到新的位置
-      tableData.splice(event.newIndex, 0, moveRow)
-    },
-  })
-})
-</script>
 ```
 
 ## ElementPlus 动态修改主题色
