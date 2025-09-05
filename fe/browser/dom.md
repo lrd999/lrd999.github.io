@@ -36,23 +36,32 @@ document.body.appendChild(fragment) // 只回流一次
 
 两者的区别为：`querySelector` 返回的为静态集合，`getElement**` 返回的是动态集合。例如：
 
-```js
-const links = document.querySelectorAll('a')
-const links2 = document.getElementsByTagName('a')
+```html
+<html>
+  <body>
+    <button id="btn">删除</button>
+    <div>1</div>
+    <div>2</div>
+    <div>3</div>
+    <div>4</div>
+    <div>5</div>
 
-// 假设当前页面有 5 个 a 元素
-console.log(links.length) // 5
-console.log(links2.length) // 5
+    <script>
+      const list = document.querySelectorAll('div')
+      const collects = document.getElementsByTagName('div')
 
-// 删除一个
-document.querySelector('a.home-link').remove()
-
-console.log(links.length) // 5
-console.log(links2.length) // 4
+      btn.onclick = () => {
+        document.querySelector('div').remove()
+        console.log(list.length) // 5
+        console.log(collects.length) // 4
+      }
+    </script>
+  </body>
+</html>
 ```
 
 - `querySelector` 和 `querySelectorAll`：返回的元素集合为 [NodeList](https://developer.mozilla.org/zh-CN/docs/Web/API/NodeList) 类型，是一个静态集合。
-- `getElementById、getElementsByClassName` 等：返回的元素集合为 [HTMLCollection](https://developer.mozilla.org/zh-CN/docs/Web/API/HTMLCollection) 类型，是一个实时集合。
+- `getElementBy*` ：返回的元素集合为 [HTMLCollection](https://developer.mozilla.org/zh-CN/docs/Web/API/HTMLCollection) 类型，是一个实时集合。
 
 ## 元素属性
 

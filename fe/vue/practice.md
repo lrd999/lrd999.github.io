@@ -25,92 +25,67 @@
 
 对于封装组件有一个大原则就是我们应该尽量保持原有组件的接口，除了我们需要封装的功能外，也保持原有组件提供的接口不变，如 props、events、slots。
 
-可以使用 Vue 提供的一些 api 实现透传，即传递过来的属性、事件等原封不动的传递到原组件中。
+::: code-group
 
-**Props、Events 等**
-
-- 模板中使用 `$attrs` 获取所有未接收的属性（指未显示声明的 props）和事件。
-- script 中使用 `useAttrs`。
-
-```vue
+```vue [方案一]
 <template>
-  <!-- 将所有属性透传给 el-input -->
-  <el-input v-bind="$attrs" />
-</template>
-```
-
-**插槽**
-
-- 模板中使用 `$slots` 获取所有的插槽，它是一个对象，属性名为插槽名，属性值为插槽函数。
-- script 中使用 `useSlots` 获取。
-
-```vue
-<template>
-  <!-- 循环所有的插槽，并传递给 el-input -->
-  <el-input>
-    <template v-for="(, name) in $slots" #[name]>
-      <slot :name="name" />
-    </template>
-  </el-input>
-</template>
-```
-
-**实例方法**
-
-通常使用 ref 获取实例时，是想使用其方法，定义一个对象，将实例暴露的属性循环添加进对象中，再将此对象对外暴露即可。
-
-```vue
-<template>
-  <!-- 为 el-input 添加阴影 -->
-  <ElInput ref="inputRef" />
+  <div>
+    <p>二次封装中的自定义内容：{{ msg }}</p>
+    <!-- 动态渲染组件，透传属性、事件和插槽 -->
+    <component :is="h(ElInput, { ...$attrs, ref: changeRef }, $slots)" />
+  </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, useTemplateRef } from 'vue'
+import { h, getCurrentInstance } from 'vue'
+import { ElInput } from 'element-plus'
 
-const inputRef = useTemplateRef('inputRef')
-const inputExpose = reactive({})
+// 二次封装传入的业务相关属性
+const props = defineProps(['msg'])
+const vm = getCurrentInstance()
 
-onMounted(() => {
-  for (const key in inputRef.value) {
-    inputExpose[key] = inputRef.value[key]
-  }
-})
-
-defineExpose(inputExpose)
+// 通过函数方式获取组件 ref，将当前实例的方法赋值为 el-input instance
+function changeRef(instance) {
+  vm.exposeProxy = vm.exposed = instance ?? {}
+}
 </script>
 ```
 
-综上，封装组件即可实现属性、事件、插槽透传。以下是一个二次封装 `el-input` 的例子。
-
-```vue
+```vue [方案二]
 <template>
-  <!-- 绑定 ref，透传属性和事件 -->
-  <el-input ref="inputRef" v-bind="$attrs" style="box-shadow: 0 0 12px #ccc">
-    <!-- 传递插槽 -->
-    <template v-for="(, name) in $slots" #[name]>
-      <slot :name="name" />
-    </template>
-  </el-input>
+  <div>
+    <p>二次封装中的自定义内容：{{ msg }}</p>
+    <el-input ref="inputRef" v-bind="$attrs">
+      <template v-for="(, slot) in $slots" :key="slot" #[slot]="slotProps">
+        <slot :name="slot" v-bind="slotProps" />
+      </template>
+    </el-input>
+  </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, useTemplateRef } from 'vue'
+import { useTemplateRef } from 'vue'
 
 const inputRef = useTemplateRef('inputRef')
-const inputExpose = reactive({})
-
-onMounted(() => {
-  // 获取 el-input 实例中暴露的属性
-  for (const key in inputRef.value) {
-    inputExpose[key] = inputRef.value[key]
-  }
-})
-
-// 暴露方法
-defineExpose(inputExpose)
+// 暴露一个代理对象，代理对象的属性和方法会映射到 el-input 组件实例上
+// 这样父组件就可以通过 ref 调用 el-input 的属性和方法
+defineExpose(
+  new Proxy(
+    {},
+    {
+      get(_, key) {
+        return inputRef.value?.[key]
+      },
+      has(_, key) {
+        return key in inputRef.value
+      },
+    },
+  ),
+)
 </script>
 ```
+
+:::
 
 ## nProgress
 

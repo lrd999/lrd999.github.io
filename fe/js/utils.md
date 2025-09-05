@@ -227,3 +227,35 @@ class EventBus {
   }
 }
 ```
+
+### 树相关
+
+```js
+/**
+ * 数组转树
+ * @param {Array} arr 
+ * @param {String|Number} pid 传根节点 id
+ * @returns {Array}
+ */
+const arrToTree = (arr, pid) => {
+  return arr
+    .filter(item => item.pid === pid)
+    .map(item => {
+      const children = arrToTree(arr, item.id)
+      return children.length ? { ...item, children } : { ...item }
+    })
+}
+
+/**
+ * 树转数组
+ * @param {Array} tree 
+ * @returns {Array}
+ */
+const treeToArr = (tree) => {
+  return tree.reduce((acc, cur) => {
+    acc.push(cur)
+    if (cur.children?.length) acc = [...acc, ...treeToArr(cur.children)]
+    return acc
+  }, [])
+}
+```

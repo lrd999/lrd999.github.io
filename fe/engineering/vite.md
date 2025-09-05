@@ -2,38 +2,6 @@
 
 [Vite](https://cn.vitejs.dev) 是一个面向现代前端开发的工具，旨在提供更快的开发体验和更高的性能。
 
-## 使用 Vite 创建项目
-
-打开终端，导航到你想要创建项目的目录，使用以下命令创建一个新的 Vite 项目。
-
-::: code-group
-
-```bash [npm]
-npm create vite@latest
-```
-
-```bash [yarn]
-yarn create vite
-```
-
-```bash [pnpm]
-pnpm create vite
-```
-
-```bash [bun]
-bun create vite
-```
-
-:::
-
-运行后，Vite 将在终端中提供一些可供选择的配置，Vite 会根据选项创建项目文件结构，创建完成后，使用以下命令启动开发服务器
-
-```bash
-cd vite-project # 将终端导航到你的项目中
-npm i # 构建依赖项
-npm run dev # 启动开发服务器
-```
-
 ## 环境变量
 
 环境变量通常用于配置不同环境下的应用程序行为，例如开发、生产或测试环境。
@@ -69,7 +37,7 @@ VITE_APP_BASE_URL = 'http://domain.com'
 console.log(import.meta.env.VITE_APP_BASE_URL)
 ```
 
-### env 文件类型
+### env 文件
 
 还可以为不同的模式创建 env 文件
 
@@ -79,19 +47,6 @@ console.log(import.meta.env.VITE_APP_BASE_URL)
 .env.development       # 只在开发模式下加载
 .env.production        # 只在生产模式下加载
 .env.production.local  # 只在生产模式下加载，并被 git 忽略
-```
-
-例如，根据环境不同，访问对应的环境变量：
-
-```js
-// .env.development
-VITE_BASE_URL = 'http://localhost'
-
-// .env.production
-VITE_BASE_URL = 'http://domain.com'
-
-// any
-console.log(import.meta.env.VITE_BASE_URL) // 根据不同模式输出不同的值
 ```
 
 ## Vite 常用配置
@@ -176,95 +131,10 @@ export default {
     rollupOptions: {
       output: {
         manualChunks: {
-          lodash: ['lodash'],
+          lodash: ['lodash'], // 将 lodash 单独分包
         },
       },
     },
   },
 }
 ```
-
-## 插件
-
-### unplugin-auto-import
-
-在使用 vue3 进行开发时，总是需要引入 `ref`、`reactive`、`onMounted` 等函数，可以通过 `unplugin-auto-import` 库自动引入 vue 相关的依赖。
-
-```bash
-npm i unplugin-auto-import -D
-```
-
-在 `vite.config.js` 中添加配置，将 `vue` 和 `vue-router` 都进行添加：
-
-```js
-// vite.config.ts
-import AutoImport from 'unplugin-auto-import/vite'
-
-export default defineConfig({
-  plugins: [AutoImport({ imports: ['vue', 'vue-router'] })],
-})
-```
-
-添加完成后，在 vue 中使用就可以不用导入了，例如：
-
-```vue
-<script setup>
-const value = ref(0)
-const user = reactive([])
-onMounted(() => {
-  /* ... */
-})
-const route = useRoute()
-</script>
-```
-
-### rollup-plugin-visualizer
-
-以图表的形式展示打包结果中各种依赖的体积，方便对项目进行打包优化。
-
-```
-npm i rollup-plugin-visualizer -D
-```
-
-在 vite.config.js 中配置
-
-```js
-import { visualizer } from 'rollup-plugin-visualizer'
-
-export default {
-  plugins: [visualizer()],
-}
-```
-
-打包后，会在项目根目录生成 stats.html 文件，打开即可查看模块体积情况。
-
-### rollup-plugin-external-globals
-
-配置不打包的模块对应的全局变量名称。
-
-该插件经常在需要使用 CDN 代替某些第三方库时使用，见 [网络/CDN](/fe/network/cdn)
-
-```bash
-npm i rollup-plugin-external-globals -D
-```
-
-在 vite.config.js 中配置
-
-```js
-import externalGlobals from 'rollup-plugin-external-globals'
-
-export default {
-  build: {
-    rollupOptions: {
-      externals: ['lodash'], // 无需打包的模块
-      externalGlobals({
-        lodash: '_', // 告诉 rollup，lodash 模块使用全局变量 _ 替代
-      })
-    }
-  }
-}
-```
-
-- 属性名为模块名称，即 package.json 中对应的名称
-
-- 属性值为该模块对外暴露的全局变量名

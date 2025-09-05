@@ -14,7 +14,7 @@ export default [
   },
   {
     text: 'JavaScript',
-    collapsed: false,
+    collapsed: true,
     items: [
       { text: '模块化', link: '/fe/js/module' },
       // { text: '位运算符', link: '/fe/js/bitwise' },
@@ -26,14 +26,14 @@ export default [
   },
   {
     text: '网络',
-    collapsed: false,
+    collapsed: true,
     items: [
       { text: 'HTTP', link: '/fe/network/http' },
       { text: '缓存', link: '/fe/network/cache' },
       // { text: 'HTTPS', link: '/fe/network/https' },
       { text: 'AJAX', link: '/fe/network/ajax' },
       { text: 'CORS', link: '/fe/network/cors' },
-      { text: 'CDN', link: '/fe/network/cdn' },
+      // { text: 'CDN', link: '/fe/network/cdn' },
       // { text: 'Cookie & Session', link: '/fe/network/cookie-session' },
       // { text: '网络安全', link: '/fe/network/security' },
       // { text: '性能优化', link: '/fe/network/performance-optimization' },
@@ -43,10 +43,9 @@ export default [
   },
   {
     text: 'Vue',
-    collapsed: false,
+    collapsed: true,
     items: [
-      { text: 'Vite 基本使用', link: '/fe/vue/vite' },
-      { text: '内置组件', link: '/fe/vue/component' },
+      { text: '组件', link: '/fe/vue/component' },
       { text: '组件通信', link: '/fe/vue/component-communicate' },
       { text: '状态管理 Pinia', link: '/fe/vue/pinia' },
       { text: '路由管理 VueRouter', link: '/fe/vue/router' },
@@ -57,7 +56,7 @@ export default [
   },
   {
     text: 'Node.js',
-    collapsed: false,
+    collapsed: true,
     items: [
       { text: '使用 nvm 管理 node', link: '/fe/node/nvm' },
       { text: 'npm 包管理器', link: '/fe/node/npm' },
@@ -71,14 +70,16 @@ export default [
       { text: 'Express 常见场景', link: '/fe/node/express-scene' },
     ],
   },
-  // {
-  //   text: '工程化',
-  //   collapsed: false,
-  //   items: [
-  //     { text: 'JS', link: '/fe/engineering/js' },
-  //     { text: 'CSS', link: '/fe/engineering/css' },
-  //     { text: 'ICON', link: '/fe/engineering/icon' },
-  //     { text: 'Git', link: '/fe/engineering/git' },
-  //   ],
-  // },
+  {
+    text: '工程化',
+    collapsed: true,
+    items: [
+      { text: 'Vite 基本使用', link: '/fe/engineering/vite' },
+      { text: '性能优化', link: '/fe/engineering/performance' },
+      // { text: 'JS', link: '/fe/engineering/js' },
+      // { text: 'CSS', link: '/fe/engineering/css' },
+      // { text: 'ICON', link: '/fe/engineering/icon' },
+      // { text: 'Git', link: '/fe/engineering/git' },
+    ],
+  },
 ]
