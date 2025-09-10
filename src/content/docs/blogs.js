@@ -1,0 +1,76 @@
+export default [
+  {
+    label: '浏览器',
+    items: [
+      { label: 'DOM 操作', slug: 'browser/dom' },
+      { label: '事件处理', slug: 'browser/event' },
+      { label: 'Observer', slug: 'browser/observer' },
+      { label: '渐进式 WEB 应用', slug: 'browser/pwa' },
+    ],
+  },
+  {
+    label: 'JavaScript',
+    items: [
+      { label: '模块化', slug: 'js/module' },
+      // { label: '位运算符', slug: 'js/bitwise' },
+      { label: '异步编程', slug: 'js/async' },
+      { label: '正则表达式', slug: 'js/reg' },
+      // { label: '设计模式', slug: 'js/design-pattern' },
+      { label: '工具函数', slug: 'js/utils' },
+    ],
+  },
+  {
+    label: '网络',
+    items: [
+      { label: 'HTTP', slug: 'network/http' },
+      { label: '缓存', slug: 'network/cache' },
+      // { label: 'HTTPS', slug: 'network/https' },
+      { label: 'AJAX', slug: 'network/ajax' },
+      { label: 'CORS', slug: 'network/cors' },
+      // { label: 'CDN', slug: 'network/cdn' },
+      // { label: 'Cookie & Session', slug: 'network/cookie-session' },
+      // { label: '网络安全', slug: 'network/security' },
+      // { label: '性能优化', slug: 'network/performance-optimization' },
+      { label: 'SSE', slug: 'network/sse' },
+      // { label: 'WebSocket', slug: 'network/websocket' },
+    ],
+  },
+  {
+    label: 'Vue',
+    items: [
+      { label: '组件', slug: 'vue/component' },
+      { label: '组件通信', slug: 'vue/component-communicate' },
+      { label: '状态管理 Pinia', slug: 'vue/pinia' },
+      { label: '路由管理 VueRouter', slug: 'vue/router' },
+      { label: 'CSS 功能', slug: 'vue/css' },
+      { label: 'h 函数', slug: 'vue/h' },
+      { label: '实践场景', slug: 'vue/practice' },
+    ],
+  },
+  {
+    label: 'Node.js',
+    items: [
+      { label: '使用 nvm 管理 node', slug: 'node/nvm' },
+      { label: 'npm 包管理器', slug: 'node/npm' },
+      // { label: '包管理器的差异', slug: 'node/pkg-manager-diff' },
+      { label: 'package.json', slug: 'node/package-json' },
+      { label: '全局变量', slug: 'node/globals' },
+      { label: '常用内置模块', slug: 'node/api' },
+      // { label: '流', slug: 'node/stream' },
+      // { label: '事件循环', slug: 'node/event-loop' },
+      { label: 'Express 基本使用', slug: 'node/express' },
+      { label: 'Express 常见场景', slug: 'node/express-scene' },
+    ],
+  },
+  {
+    label: '工程化',
+    items: [
+      { label: 'Vite 基本使用', slug: 'engineering/vite' },
+      { label: '性能优化', slug: 'engineering/performance' },
+      // { label: 'JS', slug: 'engineering/js' },
+      // { label: 'CSS', slug: 'engineering/css' },
+      // { label: 'ICON', slug: 'engineering/icon' },
+      // { label: 'Git', slug: 'engineering/git' },
+    ],
+  },
+]
