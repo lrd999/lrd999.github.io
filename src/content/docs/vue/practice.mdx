@@ -3,6 +3,7 @@ title: 实践场景
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components'
+import { Aside } from '@astrojs/starlight/components'
 
 ## VueUse
 
@@ -507,3 +508,124 @@ const handlerClick = () => {
   renderDialog(LoginForm, null, { title: '登录' })
 }
 ```
+
+## 模板内代码块复用
+
+针对一些简单的场景，我们可以在模板内直接复用代码块，而不需要抽离组件。下面是一个简单的例子：
+
+```vue {4-11,13-20}
+<template>
+  <div class="container">
+    <!-- 模块一 -->
+    <div class="block">
+      <h3 class="block-title">模块一</h3>
+      <ul class="block-list">
+        <li v-for="item in block1" :key="item.name" class="list-item">
+          {{ item.name }}
+        </li>
+      </ul>
+    </div>
+    <!-- 模块二 -->
+    <div class="block">
+      <h3 class="block-title">模块二</h3>
+      <ul class="block-list">
+        <li v-for="item in block2" :key="item.name" class="list-item">
+          {{ item.name }}
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const block1 = [
+  { name: '张三', age: 18 },
+  { name: '李四', age: 20 },
+  { name: '王五', age: 22 },
+]
+const block2 = [
+  { name: '赵六', age: 24 },
+  { name: '钱七', age: 26 },
+]
+</script>
+```
+
+需要将其转为可在模板中复用的组件。提供两种方案：
+
+1. 使用函数式组件。（此方法除根元素外，其它子元素的 `class` 样式需要使用 `:deep()` 深度选择器）
+2. 使用 VueUse 提供的 `createReusableTemplate` 函数，将模板封装为可复用的组件。
+
+<Tabs>
+<TabItem label='函数式组件'>
+```vue
+<template>
+  <div class="container">
+    <!-- 模块一 -->
+    <Block title="模块一" :list="block1" />
+    <!-- 模块二 -->
+    <Block title="模块二" :list="block2" />
+  </div>
+</template>
+
+<script setup>
+const block1 = [
+  { name: '张三', age: 18 },
+  { name: '李四', age: 20 },
+  { name: '王五', age: 22 },
+]
+const block2 = [
+  { name: '赵六', age: 24 },
+  { name: '钱七', age: 26 },
+]
+
+//  创建 Block 可复用组件
+const Block = (props) =>
+  h('div', { class: 'block' }, [
+    h('h3', { class: 'block-title' }, props.title),
+    h(
+      'ul',
+      props.list.map((item) => h('li', { class: 'list-item' }, item.name)),
+    ),
+  ])
+</script>
+
+```
+</TabItem>
+<TabItem label='VueUse - createReusableTemplate'>
+```vue
+<template>
+  <div class="container">
+    <!-- 定义模板，接收 list 和 title 参数 -->
+    <DefineTemplate v-slot="{ list, title }">
+      <div class="block">
+        <h3 class="block-title">{{ title }}</h3>
+        <ul class="block-list">
+          <li v-for="item in list" :key="item.name" class="list-item">{{ item.name }}</li>
+        </ul>
+      </div>
+    </DefineTemplate>
+
+    <!-- 在需要的地方使用模板，并传入参数 -->
+    <ReuseTemplate :list="block1" title="模块一" />
+    <ReuseTemplate :list="block2" title="模块二" />
+  </div>
+</template>
+
+<script setup>
+import { createReusableTemplate } from '@vueuse/core'
+
+const [DefineTemplate, ReuseTemplate] = createReusableTemplate()
+
+const block1 = [
+  { name: '张三', age: 18 },
+  { name: '李四', age: 20 },
+  { name: '王五', age: 22 },
+]
+const block2 = [
+  { name: '赵六', age: 24 },
+  { name: '钱七', age: 26 },
+]
+</script>
+```
+</TabItem>
+</Tabs>
