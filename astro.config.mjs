@@ -11,7 +11,7 @@ export default defineConfig({
   site: 'https://lrd999.github.io',
   integrations: [
     starlight({
-      title: 'zz 的博客',
+      title: 'zZ 的博客',
       favicon: '/favicon.svg',
       logo: { src: './src/assets/logo.svg' },
       // social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/lrd999' }],

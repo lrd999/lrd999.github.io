@@ -203,6 +203,117 @@ downloadStringToFile('今天天气不错', { ext: '.txt', mime: 'text/plain' })
 downloadStringToFile({ name: 'Tom' }, { ext: '.json', mime: 'application/json' })
 ```
 
+### 控制异步任务并发数量
+
+执行某一些特定任务时（如文件分片上传），会同时触发大量的异步任务请求，这时如果不加以控制，会阻塞其它正常任务执行。
+
+使用异步并发控制器，不会阻塞其它异步任务，减少服务器压力，合理利用带宽资源。
+
+```js
+/** 异步任务调度器，控制并发数量 */
+export class TaskScheduler {
+  constructor(limit) {
+    // 并发数量
+    this.limit = limit
+    // 当前运行的任务数量
+    this.runningCount = 0
+    // 任务队列
+    this.taskQueue = []
+  }
+
+  /** 执行任务 */
+  run() {
+    // 如果当前运行的任务数量达到限制，或者任务队列为空，则不执行任务
+    if (this.runningCount >= this.limit) return
+    if (!this.taskQueue.length) return
+    this.runningCount++
+    const task = this.taskQueue.shift()
+    // 执行任务，任务完成后，减少当前运行的任务数量，并继续执行下一个任务
+    task().finally(() => {
+      this.runningCount--
+      this.run()
+    })
+  }
+
+  /**
+   * 添加任务
+   * @param {Function} task 任务函数，返回一个 Promise
+   * @returns {Promise} 任务执行结果的 Promise
+   */
+  add(task) {
+    return new Promise((resolve, reject) => {
+      this.taskQueue.push(() => task().then(resolve).catch(reject))
+      this.run()
+    })
+  }
+}
+```
+
+使用：
+
+```js
+import { TaskScheduler } from '@/utils/task-scheduler'
+
+// 限制最大并发数量为 2
+const scheduler = new TaskScheduler(2)
+// 模拟异步任务
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// 添加任务到调度器
+scheduler.add(() => delay(1000).then(() => console.log('Task 1 completed')))
+scheduler.add(() => delay(1000).then(() => console.log('Task 2 completed')))
+scheduler.add(() => delay(1000).then(() => console.log('Task 3 completed')))
+scheduler.add(() => delay(1000).then(() => console.log('Task 4 completed')))
+
+/**
+ * 输出结果：
+ * 一秒后：完成 Task 1 completed、Task 2 completed
+ * 二秒后：完成 Task 3 completed、Task 4 completed
+ */
+```
+
+### 请求缓存
+
+在某些场景下（如搜索建议、数据字典等），频繁请求同一接口会导致不必要的带宽消耗。此时可以使用请求缓存，避免重复请求。
+
+```js
+/**
+ * 为请求函数创建一个带缓存的版本
+ * @param {Function} fn 请求函数，返回一个 Promise
+ * @param {Number} ms 缓存时间，默认 5000 毫秒
+ * @returns {Function} 带缓存的请求函数
+ */
+export const createCacheRequest = (fn, ms = 5000) => {
+  const map = {}
+  return (...args) => {
+    const key = JSON.stringify(args)
+    // 如果缓存中有值，直接返回缓存中的 Promise，否则执行函数并缓存结果
+    return (map[key] ??= fn(...args).finally(() => {
+      // 在指定时间后删除缓存
+      setTimeout(() => {
+        delete map[key]
+      }, ms)
+    }))
+  }
+}
+```
+
+使用：
+
+```js
+// 模拟请求函数
+const getUserInfo = async id => {
+  const resp = await fetch(`/api/user/${id}`)
+  return resp.json()
+}
+
+// 创建带缓存的请求函数
+const cachedGetUserInfo = createCacheRequest(getUserInfo, 10000) // 缓存 10 秒
+
+const info1 = await cachedGetUserInfo(123)
+const info2 = await cachedGetUserInfo(123) // 10 秒内不会重复请求
+```
+
 ### EventBus
 
 EventBus 是一种通信机制，基于发布订阅设计模式。它可以在不同模块/组件之间进行通信。

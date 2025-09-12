@@ -237,3 +237,273 @@ watch(primaryColor, color => {
 })
 </script>
 ```
+
+## 动态表单
+
+使用表单时通过传入表单配置对象，动态渲染表单项，可以大大减少重复代码。
+
+```vue
+<template>
+  <el-form ref="formRef" :model="modelValue" :rules>
+    <el-row :gutter="20">
+      <el-col v-for="item in filteredItems" :key="item.key" :span="item.span">
+        <el-form-item :label="item.label" :prop="item.key">
+          <slot :name="item.key">
+            <component
+              :is="
+                h(
+                  getComponent(item.type),
+                  { ...item.props, modelValue: modelValue[item.key] },
+                  item.slots,
+                )
+              "
+            />
+          </slot>
+        </el-form-item>
+      </el-col>
+    </el-row>
+  </el-form>
+</template>
+
+<script setup>
+import { computed, h } from 'vue'
+import { ElInput, ElInputNumber, ElSelect } from 'element-plus'
+
+const props = defineProps(['formItems', 'rules'])
+const modelValue = defineModel()
+const formRef = useTemplateRef('formRef')
+
+const filteredItems = computed(() => {
+  return props.formItems.filter((item) => !item.hidden)
+})
+// 默认组件映射
+const componentMap = {
+  input: ElInput,
+  number: ElInputNumber,
+  select: ElSelect,
+}
+
+const getComponent = (type) => {
+  type ??= 'input'
+  if (typeof type === 'string') {
+    return componentMap[type]
+  }
+  return type
+}
+
+// 暴露一个代理对象，代理对象的属性和方法会映射到 el-form 组件实例上
+// 这样父组件就可以通过 ref 调用 el-form 的属性和方法
+defineExpose(
+  new Proxy(
+    {},
+    {
+      get(target, key) {
+        return formRef.value?.[key]
+      },
+      has(target, key) {
+        return key in formRef.value
+      },
+    },
+  ),
+)
+</script>
+```
+
+使用：
+
+```vue
+<template>
+  <div>
+    <FormBuilder
+      ref="formRef"
+      :form-items="formItems"
+      v-model="formData"
+      :rules
+    >
+    </FormBuilder>
+  </div>
+</template>
+
+<script setup>
+import FormBuilder from '@/components/FormBuilder.vue'
+
+const formRef = useTemplateRef('formRef')
+// 表单数据
+const formData = ref({
+  name: '',
+  image: '',
+})
+// 表单校验规则
+const rules = {
+  name: [
+    { required: true, message: 'Please input Activity name', trigger: 'blur' },
+    { min: 2, max: 5, message: 'Length should be 2 to 5', trigger: 'blur' },
+  ],
+}
+// 表单配置项
+const formItems = computed(() => [
+  {
+    label: '姓名',
+    key: 'name',
+    type: 'input',
+    // 传递属性与事件
+    props: {
+      placeholder: '请输入姓名',
+      onInput(val) {
+        console.log(val)
+      },
+    },
+    // 传递插槽
+    slots: {
+      prepend: 'HTTPS://',
+      append: '.com',
+    }
+  },
+  // 也可以传入组件
+  {
+    label: '图片',
+    key: 'image',
+    type: h(ElImage, { src: '/some-image.jpeg' }), 
+  },
+])
+
+const onSubmit = () => {
+  // 调用 validate 方法进行表单校验
+  formRef.value.validate()
+}
+</script>
+
+```
+
+## 函数式弹窗
+
+使用函数来创建弹窗，可以简化弹窗的使用。本例中：
+
+1. 对 `ElDialog` 组件进行了二次封装，在默认情况下会显示 `取消` 和 `确定` 两个按钮。并将弹窗宽度固定为 `600px`，可通过参数覆盖。
+2. 使用二次封装的 `DataDialog` 完成函数式弹窗。
+
+<Tabs>
+<TabItem label='DataDialog.vue'>
+```vue
+<template>
+  <el-dialog ref="dialogRef" v-bind="{ width: '600px', ...$attrs }">
+    <template v-for="(, slot) in $slots" :key="slot" #[slot]="slotProps">
+      <slot :name="slot" v-bind="slotProps"></slot>
+    </template>
+    <!-- 自定义 footer -->
+    <template #footer v-if="!hideFooter">
+      <slot name="footer">
+        <el-button @click="cancel">取消</el-button>
+        <el-button type="primary" @click="confirm" :loading="confirmLoading">确定</el-button>
+      </slot>
+    </template>
+  </el-dialog>
+</template>
+
+<script setup>
+import { ElDialog } from 'element-plus'
+
+defineProps({
+  hideFooter: Boolean, // 隐藏页脚
+  confirmLoading: Boolean, // 确定按钮的加载状态
+})
+const emit = defineEmits(['cancel', 'confirm'])
+const dialogRef = useTemplateRef('dialogRef')
+
+const cancel = () => {
+  dialogRef.value?.handleClose?.()
+  emit('cancel')
+}
+const confirm = () => {
+  emit('confirm')
+}
+</script>
+```
+</TabItem>
+<TabItem label='renderDialog.js'>
+```js
+import DataDialog from '@/components/DataDialog.vue'
+import { loadPlugins } from '@/main'
+
+/**
+ * 函数式弹窗
+ * @param {*} component 要在弹窗内渲染的组件
+ * @param {*} props component 组件的属性
+ * @param {*} dialogProps 弹窗的属性
+ * @returns {{ instance, unmount }} 返回 component 实例和卸载弹窗的函数
+ */
+const renderDialog = (component, props = {}, dialogProps = {}) => {
+  const visible = ref(true)
+  const loading = ref(false)
+  const instance = ref()
+
+  // 使用 h 函数渲染 DataDialog
+  const dialog = () =>
+    h(
+      DataDialog,
+      {
+        ...dialogProps,
+        modelValue: visible.value,
+        confirmLoading: loading.value,
+        onClosed() {
+          unmount()
+        },
+        async onConfirm() {
+          loading.value = true
+          try {
+            await instance.value?.submit?.()
+          } finally {
+            loading.value = false
+          }
+        },
+      },
+      {
+        // 将传递的 component 传入 DataDialog 的默认插槽
+        default: () => h(component, { ...props, ref: instance }),
+      },
+    )
+
+  // 挂载 dialog
+  const app = createApp(dialog)
+  // 将插件挂在到 app 上
+  loadPlugins(app)
+  const div = document.createElement('div')
+  document.body.appendChild(div)
+  app.mount(div)
+
+  /** 卸载 dialog */
+  const unmount = () => {
+    setTimeout(() => {
+      app.unmount()
+      document.body.removeChild(div)
+    }, 1000)
+  }
+
+  return { instance, unmount }
+}
+
+export default renderDialog
+```
+</TabItem>
+<TabItem label='loadPlugin 函数'>
+```js
+// 该函数用于加载 app 的插件
+export const loadPlugin = (app) => {
+  app.use(router)
+  app.use(pinia)
+  // ...
+}
+```
+</TabItem>
+</Tabs>
+
+封装完成之后，使用时极为方便，无需在管理弹窗的相关变量：
+
+```js
+import renderDialog from '@/utils/renderDialog.js'
+import LoginForm from '@/views/login-form.vue'
+
+const handlerClick = () => {
+  renderDialog(LoginForm, null, { title: '登录' })
+}
+```
