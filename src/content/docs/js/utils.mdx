@@ -2,6 +2,8 @@
 title: 工具函数
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components'
+
 在开发中，经常会将一些常用的代码块、功能块进行封装，为的是更好的复用。此文章收录一些常用的功能函数，之后遇到的也会加入进来
 
 ### 获取随机数
@@ -61,6 +63,52 @@ const delay = (duration = 500) => {
  */
 const delay = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms))
 ```
+
+### 防抖/节流
+
+- 防抖函数：多用于 `等待用户操作` 的场景，如文本框输入、窗口 `resize` 等。
+- 节流函数：多用于 `限制触发频率` 的场景，如滚动事件、按钮点击等。
+
+<Tabs>
+<TabItem label="防抖">
+```js
+/**
+ * 防抖
+ * @param {Function} func 需要防抖的函数
+ * @param {Number} delay 延迟时间
+ * @returns {Function} 返回防抖后的函数
+ */
+const debounce = (func, delay) => {
+  let timer = null
+  return (...args) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      func(...args)
+    }, delay)
+  }
+}
+```
+</TabItem>
+<TabItem label="节流">
+```js
+/**
+ * 节流
+ * @param {Function} func 需要节流的函数
+ * @param {Number} delay 延迟时间
+ * @returns {Function} 返回节流后的函数
+ */
+const throttle = (func, delay) => {
+  let timer = null
+  return (...args) => {
+    func(...args)
+    timer = setTimeout(() => {
+      timer = null
+    }, delay)
+  }
+}
+```
+</TabItem>
+</Tabs>
 
 ### 格式化尺寸单位
 
@@ -133,7 +181,7 @@ const formatDate = (date = new Date(), format = 'yyyy-MM-dd HH:mm:ss') => {
 - `cdate`：同 yyyy 年 MM 月 dd 日
 - `ctime`：同 HH 时 mm 分 ss 秒
 - `cdatetime`：同 yyyy 年 MM 月 dd 日 HH 时 mm 分 ss 秒
-- `t | timestamp`：返回时间戳
+- `t` 或 `timestamp`：返回时间戳
 
 ### 数组转树
 
@@ -163,7 +211,7 @@ const arrToTree = (arr) => {
 }
 ```
 
-### 将文本内容下载为文件
+### 将文本下载为 `.txt` 文件
 
 通过使用 `Blob` 对象和创建一个下载链接来实现文件的下载。
 
@@ -171,37 +219,30 @@ const arrToTree = (arr) => {
 /**
  * 将文本下载为文件
  * @param {Object|String} content
- * @param {{ filename, ext, mime }} [options]
- * @param {String} options.filename 文件名
- * @param {String} options.ext 后缀名
- * @param {String} options.mime 文件的 MIME 类型
+ * @param {String} [filename] 文件名
  */
-const downloadStringToFile = (content, options = {}) => {
-  if (!content) return
-  options = Object.assign({ filename: 'file', ext: '.json', mime: 'application/json' }, options)
-  if (typeof content === 'object') {
-    content = JSON.stringify(content, null, 2)
+const downloadString = (content, filename = 'file.txt') => {
+  if (!content) {
+    throw new Error('请检查【content】的内容')
   }
-  if (!options.ext.startsWith('.')) {
-    options.ext = '.' + options.ext
-  }
-  const blob = new Blob([content], { type: options.mime })
+  const blob = new Blob([content], { type: 'text/plain' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = options.filename
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   URL.revokeObjectURL(url)
   document.body.removeChild(a)
 }
-
-// 下载为 txt 文件
-downloadStringToFile('今天天气不错', { ext: '.txt', mime: 'text/plain' })
-
-// 下载为 json 文件
-downloadStringToFile({ name: 'Tom' }, { ext: '.json', mime: 'application/json' })
 ```
+
+使用：
+
+```js
+downloadString('今天天气不错！') // 调起浏览器下载行为
+```
+
 
 ### 控制异步任务并发数量
 
@@ -302,7 +343,7 @@ export const createCacheRequest = (fn, ms = 5000) => {
 
 ```js
 // 模拟请求函数
-const getUserInfo = async id => {
+const getUserInfo = async (id) => {
   const resp = await fetch(`/api/user/${id}`)
   return resp.json()
 }
@@ -343,7 +384,6 @@ class EventBus {
   /** 触发事件 */
   emit(name, ...args) {
     const list = this.store.get(name)
-    if (!list?.size) return
     list.forEach((listener) => {
       try {
         listener(...args)
@@ -352,5 +392,33 @@ class EventBus {
       }
     })
   }
+
+  /** 执行一次后卸载监听器 */
+  once(name, listener) {
+    const wrapper = (...args) => {
+      listener(...args)
+      this.off(name, wrapper)
+    }
+    this.on(name, wrapper)
+  }
 }
+```
+
+使用：
+
+```js
+const bus = new EventBus()
+
+const handler = () => {
+  // do something
+}
+
+// 注册事件
+bus.on('foo', handler)
+
+// 在任意组件或代码中执行 handler
+bus.emit('foo')
+
+// 卸载事件
+bus.off('foo', handler)
 ```
