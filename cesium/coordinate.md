@@ -2,7 +2,7 @@
 
 ## WGS84 坐标系
 
-WGS84 坐标系（World Geodetic System 1984）是一种**大地坐标系**，用于地球表面位置描述，是 GPS 使用的全球标准。
+WGS84 坐标系（World Geodetic System 1984）是一种**大地坐标系**，即用**经度、纬度、高度**描述位置，是 GPS 使用的全球标准。
 
 WGS84 坐标系的单位为**度**，在 Cesium 中用 [Cartographic](https://cesium.com/learn/cesiumjs/ref-doc/Cartographic.html) 类表示，由经度、纬度、高度三个分量表示，经纬和纬度的单位是弧度，高度的单位是米。
 

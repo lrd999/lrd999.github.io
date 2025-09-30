@@ -56,6 +56,25 @@ export default defineConfig({
 })
 ```
 
+想要让编辑器识别 `@` 目录，可以在 `tsconfig.json` 中进行配置。
+
+> 如果项目没有使用 `typescript`，也可以在根目录中新建 `jsconfig.json` 来进行配置。`jsconfig.json` 就是 `tsconfig.json`，只是将 `"allowJs"` 属性设置为 true。
+
+::: code-group
+
+```ts [tsconfig.json]
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  }
+}
+```
+
+:::
+
 ### 注入全局 Sass 文件
 
 Vite 支持多种 CSS 预处理器，你可以通过 `css.preprocessorOptions` 配置选项来启用和配置它们。下面是一个全局注入 sass 文件的示例

@@ -14,14 +14,17 @@ export default defineConfig({
     // socialLinks: [{ icon: 'github', link: 'https://github.com/vuejs/vitepress' }],
     search: { provider: 'local' },
     docFooter: { prev: '上一页', next: '下一页' },
+    sidebarMenuLabel: '菜单',
     returnToTopLabel: '回顶部',
+    outline: { label: '页面导航', level: 'deep' },
+    darkModeSwitchTitle: '切换深色模式',
+    lightModeSwitchTitle: '切换浅色模式',
     externalLinkIcon: true,
     nav: [
       { text: '首页', link: '/' },
       { text: '前端笔记', link: '/docs/utils' },
       { text: 'Cesium 笔记', link: '/cesium/coordinate' },
     ],
-    outline: { label: '目录', level: 'deep' },
     sidebar: {
       '/docs/': SidebarDocs,
       '/cesium/': SidebarCesium,
