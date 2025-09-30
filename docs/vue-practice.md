@@ -1,0 +1,606 @@
+# Vue 实践场景
+
+## VueUse
+
+[VueUse](https://www.vueusejs.com/) 是一款基于组合式 API 的函数集合。
+
+- `useStorage`：响应式的 LocalStorage/SessionStorage。
+- `useWindowSize`：响应式获取窗口尺寸。
+- `useClipboard`：提供剪切、复制和粘贴与异步读写系统剪贴板的能力，读取剪切板内容需要授权。
+- `useCssVar`：操作 css 变量。
+- `useDark`：响应式暗黑模式。
+- `useEventListener`：在挂载时使用 addEventListener 注册，在卸载时自动使用 removeEventListener 。
+- `useFavicon`：响应式操作页面的 favicon 图标。
+- `useFullscreen`：操作网页进入/退出全屏模式。
+- `onClickOutside`：监听元素外部的点击事件，对模态框和下拉菜单很有用。
+- `onLongPress`：监听元素的长按事件。
+- `useRefHistory`：跟踪 ref 的更改历史，提供撤消和重做功能。
+- `watchThrottled`：节流 watch。
+- `watchDebounced`：防抖 watch。
+- ...
+
+## 组件二次封装
+
+有时组件提供的接口并不一定满足我们的需求，这时我们可以通过对组件库组件的二次封装，来满足我们特殊的需求。
+
+对于封装组件有一个大原则就是我们应该尽量保持原有组件的接口，除了我们需要封装的功能外，也保持原有组件提供的接口不变，如 props、events、slots。
+
+::: code-group
+
+```vue [方案一]
+<template>
+  <div>
+    <p>二次封装中的自定义内容：{{ msg }}</p>
+    <!-- 动态渲染组件，透传属性、事件和插槽 -->
+    <component :is="h(ElInput, { ...$attrs, ref: changeRef }, $slots)" />
+  </div>
+</template>
+
+<script setup>
+import { h, getCurrentInstance } from 'vue'
+import { ElInput } from 'element-plus'
+
+// 二次封装传入的业务相关属性
+const props = defineProps(['msg'])
+const vm = getCurrentInstance()
+
+// 通过函数方式获取组件 ref，将当前实例的方法赋值为 el-input instance
+function changeRef(instance) {
+  vm.exposeProxy = vm.exposed = instance ?? {}
+}
+</script>
+```
+
+```vue [方案二]
+<template>
+  <div>
+    <p>二次封装中的自定义内容：{{ msg }}</p>
+    <el-input ref="inputRef" v-bind="$attrs">
+      <template v-for="(, slot) in $slots" :key="slot" #[slot]="slotProps">
+        <slot :name="slot" v-bind="slotProps" />
+      </template>
+    </el-input>
+  </div>
+</template>
+
+<script setup>
+import { useTemplateRef } from 'vue'
+
+const inputRef = useTemplateRef('inputRef')
+// 暴露一个代理对象，代理对象的属性和方法会映射到 el-input 组件实例上
+// 这样父组件就可以通过 ref 调用 el-input 的属性和方法
+defineExpose(
+  new Proxy(
+    {},
+    {
+      get(_, key) {
+        return inputRef.value?.[key]
+      },
+      has(_, key) {
+        return key in inputRef.value
+      },
+    },
+  ),
+)
+</script>
+```
+
+:::
+
+## nProgress
+
+[nProgress](https://ricostacruz.com/nprogress/) 是一款轻量级的页面加载进度条库，在 Vue 中，通常与 VueRouter 结合使用。
+
+```js
+import { createRouter, createWebHistory } from 'vue-router'
+import nProgress from 'nprogress'
+import 'nprogress/nprogress.css'
+
+// 关闭右上角圆环加载器
+nProgress.configure({ showSpinner: false })
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [],
+})
+
+router.beforeEach((to, from) => {
+  nProgress.start() // 进度条开始加载
+})
+
+router.afterEach((to, from) => {
+  nProgress.done() // 进度条结束加载
+})
+
+export default router
+```
+
+## Axios 配置
+
+[Axios](https://www.axios-http.cn/) 是一个用于网络请求的库，它基于 Promise 对于 XMLHttpRequest 进行了封装，可以在浏览器和 Node.js 环境使用。
+
+在 Vue 中，常常会使用它的[拦截器](https://www.axios-http.cn/docs/interceptors)，来对整个项目的网络请求进行封装，例如：请求时携带 token、响应时处理错误等。
+
+```js
+import axios from 'axios'
+import { ElMessage } from 'element-plus'
+
+const instance = axios.create({
+  baseURL: import.meta.env.VITE_APP_BASE_URL, // 基本请求路径
+  timeout: 5000, // 请求超时时间
+})
+
+// 请求拦截器
+instance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      // Authorization 为自定义的请求头，开发时需以自己项目来决定
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
+
+// 响应拦截器
+instance.interceptors.response.use(
+  (response) => {
+    // 此 res 为后端手动封装的消息格式，开发时需以自己项目决定
+    const res = response.data
+    if (res.code !== 200) {
+      ElMessage.error(res.msg ?? '请求失败！')
+      return Promise.reject(res)
+    }
+    return res
+  },
+  (error) => {
+    ElMessage.error(error.msg ?? '请求失败！')
+    return Promise.reject(error)
+  },
+)
+
+export default instance
+```
+
+## ElementPlus 动态修改主题色
+
+ElementPlus 主题色是由一个主色和几个辅色组成，辅色用于元素 hover、active、disabled 等效果。在控制台可以看到它们的 css 变量名和值。
+
+```css
+:root {
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+}
+```
+
+通过设置 css 变量改变主题色，用函数生成辅色变量，即可完成修改主题色。
+
+其中，辅色中 light 代表与白色混合，dark 代表与黑色混合，后面的数字就代表需要混合的比率。
+
+按比率混合颜色的函数：
+
+```js
+/**
+ * 按比率混合两种颜色，类似 sass 的 mix 函数
+ * @param {String} color1 十六进制颜色
+ * @param {String} color2 十六进制颜色
+ * @param {Number} ratio 比例 0-1
+ * @returns {String} 混合后的十六进制颜色
+ */
+export const blendColors = (color1, color2, ratio) => {
+  ratio = Math.max(0, Math.min(1, ratio))
+  const hex = (c) => {
+    const hex = c.toString(16)
+    return hex.length == 1 ? '0' + hex : hex
+  }
+  const r = Math.ceil(parseInt(color1.substring(1, 3), 16) * ratio + parseInt(color2.substring(1, 3), 16) * (1 - ratio))
+  const g = Math.ceil(parseInt(color1.substring(3, 5), 16) * ratio + parseInt(color2.substring(3, 5), 16) * (1 - ratio))
+  const b = Math.ceil(parseInt(color1.substring(5, 7), 16) * ratio + parseInt(color2.substring(5, 7), 16) * (1 - ratio))
+  return `#${hex(r)}${hex(g)}${hex(b)}`
+}
+```
+
+示例代码：
+
+```vue
+<template>
+  <el-color-picker v-model="primaryColor" />
+</template>
+
+<script setup>
+import { ref, watch } from 'vue'
+import { blendColors } from '@/utils'
+
+const primaryColor = ref('#409eff') // 默认项目主题色
+
+watch(primaryColor, (color) => {
+  // 修改主题色，将变量修改到 body 上，优先级大于 :root 选择器，ElementPlus 组件就会使用 body 中的变量
+  document.body.style.setProperty('--el-color-primary', color)
+  // 修改 dark 辅色
+  document.body.style.setProperty('--el-color-primary-dark-2', blendColors('#000000', color, 0.2))
+  // 循环修改剩余的 light 辅色
+  ;[3, 5, 7, 8, 9].forEach((level) => {
+    const computedColor = blendColors('#ffffff', color, level / 10)
+    document.body.style.setProperty('--el-color-primary-light-' + level, computedColor)
+  })
+})
+</script>
+```
+
+## 动态表单
+
+使用表单时通过传入表单配置对象，动态渲染表单项，可以大大减少重复代码。
+
+```vue
+<template>
+  <el-form ref="formRef" :model="modelValue" :rules>
+    <el-row :gutter="20">
+      <el-col v-for="item in filteredItems" :key="item.key" :span="item.span">
+        <el-form-item :label="item.label" :prop="item.key">
+          <slot :name="item.key">
+            <component
+              :is="h(getComponent(item.type), { ...item.props, modelValue: modelValue[item.key] }, item.slots)"
+            />
+          </slot>
+        </el-form-item>
+      </el-col>
+    </el-row>
+  </el-form>
+</template>
+
+<script setup>
+import { computed, h } from 'vue'
+import { ElInput, ElInputNumber, ElSelect } from 'element-plus'
+
+const props = defineProps(['formItems', 'rules'])
+const modelValue = defineModel()
+const formRef = useTemplateRef('formRef')
+
+const filteredItems = computed(() => {
+  return props.formItems.filter((item) => !item.hidden)
+})
+// 默认组件映射
+const componentMap = {
+  input: ElInput,
+  number: ElInputNumber,
+  select: ElSelect,
+}
+
+const getComponent = (type) => {
+  type ??= 'input'
+  if (typeof type === 'string') {
+    return componentMap[type]
+  }
+  return type
+}
+
+// 暴露一个代理对象，代理对象的属性和方法会映射到 el-form 组件实例上
+// 这样父组件就可以通过 ref 调用 el-form 的属性和方法
+defineExpose(
+  new Proxy(
+    {},
+    {
+      get(target, key) {
+        return formRef.value?.[key]
+      },
+      has(target, key) {
+        return key in formRef.value
+      },
+    },
+  ),
+)
+</script>
+```
+
+使用：
+
+```vue
+<template>
+  <div>
+    <FormBuilder ref="formRef" :form-items="formItems" v-model="formData" :rules></FormBuilder>
+  </div>
+</template>
+
+<script setup>
+import FormBuilder from '@/components/FormBuilder.vue'
+
+const formRef = useTemplateRef('formRef')
+// 表单数据
+const formData = ref({
+  name: '',
+  image: '',
+})
+// 表单校验规则
+const rules = {
+  name: [
+    { required: true, message: 'Please input Activity name', trigger: 'blur' },
+    { min: 2, max: 5, message: 'Length should be 2 to 5', trigger: 'blur' },
+  ],
+}
+// 表单配置项
+const formItems = computed(() => [
+  {
+    label: '姓名',
+    key: 'name',
+    type: 'input',
+    // 传递属性与事件
+    props: {
+      placeholder: '请输入姓名',
+      onInput(val) {
+        console.log(val)
+      },
+    },
+    // 传递插槽
+    slots: {
+      prepend: 'HTTPS://',
+      append: '.com',
+    },
+  },
+  // 也可以传入组件
+  {
+    label: '图片',
+    key: 'image',
+    type: h(ElImage, { src: '/some-image.jpeg' }),
+  },
+])
+
+const onSubmit = () => {
+  // 调用 validate 方法进行表单校验
+  formRef.value.validate()
+}
+</script>
+```
+
+## 函数式弹窗
+
+使用函数来创建弹窗，可以简化弹窗的使用。本例中：
+
+1. 对 `ElDialog` 组件进行了二次封装，在默认情况下会显示 `取消` 和 `确定` 两个按钮。并将弹窗宽度固定为 `600px`，可通过参数覆盖。
+2. 使用二次封装的 `DataDialog` 完成函数式弹窗。
+
+::: code-group
+
+```vue [DataDialog.vue]
+<template>
+  <el-dialog ref="dialogRef" v-bind="{ width: '600px', ...$attrs }">
+    <template v-for="(, slot) in $slots" :key="slot" #[slot]="slotProps">
+      <slot :name="slot" v-bind="slotProps"></slot>
+    </template>
+    <!-- 自定义 footer -->
+    <template #footer v-if="!hideFooter">
+      <slot name="footer">
+        <el-button @click="cancel">取消</el-button>
+        <el-button type="primary" @click="confirm" :loading="confirmLoading">确定</el-button>
+      </slot>
+    </template>
+  </el-dialog>
+</template>
+
+<script setup>
+import { ElDialog } from 'element-plus'
+
+defineProps({
+  hideFooter: Boolean, // 隐藏页脚
+  confirmLoading: Boolean, // 确定按钮的加载状态
+})
+const emit = defineEmits(['cancel', 'confirm'])
+const dialogRef = useTemplateRef('dialogRef')
+
+const cancel = () => {
+  dialogRef.value?.handleClose?.()
+  emit('cancel')
+}
+const confirm = () => {
+  emit('confirm')
+}
+</script>
+```
+
+```js [renderDialog.js]
+import DataDialog from '@/components/DataDialog.vue'
+import { loadPlugins } from '@/main'
+
+/**
+ * 函数式弹窗
+ * @param {*} component 要在弹窗内渲染的组件
+ * @param {*} props component 组件的属性
+ * @param {*} dialogProps 弹窗的属性
+ * @returns {{ instance, unmount }} 返回 component 实例和卸载弹窗的函数
+ */
+const renderDialog = (component, props = {}, dialogProps = {}) => {
+  const visible = ref(true)
+  const loading = ref(false)
+  const instance = ref()
+
+  // 使用 h 函数渲染 DataDialog
+  const dialog = () =>
+    h(
+      DataDialog,
+      {
+        ...dialogProps,
+        modelValue: visible.value,
+        confirmLoading: loading.value,
+        onClosed() {
+          unmount()
+        },
+        async onConfirm() {
+          loading.value = true
+          try {
+            await instance.value?.submit?.()
+          } finally {
+            loading.value = false
+          }
+        },
+      },
+      {
+        // 将传递的 component 传入 DataDialog 的默认插槽
+        default: () => h(component, { ...props, ref: instance }),
+      },
+    )
+
+  // 挂载 dialog
+  const app = createApp(dialog)
+  // 将插件挂在到 app 上
+  loadPlugins(app)
+  const div = document.createElement('div')
+  document.body.appendChild(div)
+  app.mount(div)
+
+  /** 卸载 dialog */
+  const unmount = () => {
+    setTimeout(() => {
+      app.unmount()
+      document.body.removeChild(div)
+    }, 1000)
+  }
+
+  return { instance, unmount }
+}
+
+export default renderDialog
+```
+
+```js [loadPlugin 函数]
+// 该函数用于加载 app 的插件
+export const loadPlugin = (app) => {
+  app.use(router)
+  app.use(pinia)
+  // ...
+}
+```
+
+:::
+
+封装完成之后，使用时极为方便，无需在管理弹窗的相关变量：
+
+```js
+import renderDialog from '@/utils/renderDialog.js'
+import LoginForm from '@/views/login-form.vue'
+
+const handlerClick = () => {
+  renderDialog(LoginForm, null, { title: '登录' })
+}
+```
+
+## 模板内代码块复用
+
+针对一些简单的场景，我们可以在模板内直接复用代码块，而不需要抽离组件。下面是一个简单的例子：
+
+```vue {4-11,13-20}
+<template>
+  <div class="container">
+    <!-- 模块一 -->
+    <div class="block">
+      <h3 class="block-title">模块一</h3>
+      <ul class="block-list">
+        <li v-for="item in block1" :key="item.name" class="list-item">
+          {{ item.name }}
+        </li>
+      </ul>
+    </div>
+    <!-- 模块二 -->
+    <div class="block">
+      <h3 class="block-title">模块二</h3>
+      <ul class="block-list">
+        <li v-for="item in block2" :key="item.name" class="list-item">
+          {{ item.name }}
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<script setup>
+const block1 = [
+  { name: '张三', age: 18 },
+  { name: '李四', age: 20 },
+  { name: '王五', age: 22 },
+]
+const block2 = [
+  { name: '赵六', age: 24 },
+  { name: '钱七', age: 26 },
+]
+</script>
+```
+
+需要将其转为可在模板中复用的组件。提供两种方案：
+
+1. 使用函数式组件。（此方法除根元素外，其它子元素的 `class` 样式需要使用 `:deep()` 深度选择器）
+2. 使用 VueUse 提供的 `createReusableTemplate` 函数，将模板封装为可复用的组件。
+
+::: code-group
+
+```vue [函数式组件]
+<template>
+  <div class="container">
+    <!-- 模块一 -->
+    <Block title="模块一" :list="block1" />
+    <!-- 模块二 -->
+    <Block title="模块二" :list="block2" />
+  </div>
+</template>
+
+<script setup>
+const block1 = [
+  { name: '张三', age: 18 },
+  { name: '李四', age: 20 },
+  { name: '王五', age: 22 },
+]
+const block2 = [
+  { name: '赵六', age: 24 },
+  { name: '钱七', age: 26 },
+]
+
+//  创建 Block 可复用组件
+const Block = (props) =>
+  h('div', { class: 'block' }, [
+    h('h3', { class: 'block-title' }, props.title),
+    h(
+      'ul',
+      props.list.map((item) => h('li', { class: 'list-item' }, item.name)),
+    ),
+  ])
+</script>
+```
+
+```vue [VueUse/createReusableTemplate]
+<template>
+  <div class="container">
+    <!-- 定义模板，接收 list 和 title 参数 -->
+    <DefineTemplate v-slot="{ list, title }">
+      <div class="block">
+        <h3 class="block-title">{{ title }}</h3>
+        <ul class="block-list">
+          <li v-for="item in list" :key="item.name" class="list-item">{{ item.name }}</li>
+        </ul>
+      </div>
+    </DefineTemplate>
+
+    <!-- 在需要的地方使用模板，并传入参数 -->
+    <ReuseTemplate :list="block1" title="模块一" />
+    <ReuseTemplate :list="block2" title="模块二" />
+  </div>
+</template>
+
+<script setup>
+import { createReusableTemplate } from '@vueuse/core'
+
+const [DefineTemplate, ReuseTemplate] = createReusableTemplate()
+
+const block1 = [
+  { name: '张三', age: 18 },
+  { name: '李四', age: 20 },
+  { name: '王五', age: 22 },
+]
+const block2 = [
+  { name: '赵六', age: 24 },
+  { name: '钱七', age: 26 },
+]
+</script>
+```
