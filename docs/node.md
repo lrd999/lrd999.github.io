@@ -66,7 +66,7 @@ nrm add <registry> <url>
 nrm test taobao
 ```
 
-### 常用命令
+### npm 常用命令
 
 ```bash
 # 初始化，-y 代表跳过 cli，全部使用默认值
@@ -89,7 +89,7 @@ npm un package-name
 npm uninstall package-name
 ```
 
-## 基本使用
+## Node.js 基本使用
 
 Nodejs 中的 js 文件默认使用 CommonJS 模块化规范，如要使用 ESM 规范，需在 package.json 中指定：
 
