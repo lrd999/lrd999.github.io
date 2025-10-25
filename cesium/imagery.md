@@ -120,7 +120,7 @@ viewer.dataSources.add(dataSource)
 
 .KML（Keyhole Markup Language）一种基于 XML 语法与格式，用于描述和保存地理信息（如点、线、图像、多边形、和模型等）。
 
-Cesium 提供了 [KmlDataSource]() 类来处理 KML 数据，可以通过 load 方法加载 KML 数据。
+Cesium 提供了 [KmlDataSource](https://cesium.com/learn/ion-sdk/ref-doc/KmlDataSource.html) 类来处理 KML 数据，可以通过 load 方法加载 KML 数据。
 
 ```js
 const dataSource = await Cesium.KmlDataSource.load('./facilities.kmz', {
