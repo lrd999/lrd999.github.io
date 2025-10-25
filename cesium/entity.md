@@ -75,37 +75,6 @@ viewer.entities.add({
 
 :::
 
-分组管理场景中的实体，可以创建数据源（DataSource）来添加实体。
-
-例如，使用 `CustomDataSource` 进行管理：
-
-```js
-const dataSource = new Cesium.CustomDataSource('图片组')
-
-dataSource.entities.add({
-  name: '图片1',
-  position: Cesium.Cartesian3.fromDegrees(1, 2, 0),
-  billboard: {
-    image: 'image1.png',
-  },
-})
-dataSource.entities.add({
-  name: '图片2',
-  position: Cesium.Cartesian3.fromDegrees(2, 2, 0),
-  billboard: {
-    image: 'image2.png',
-  },
-})
-
-viewer.dataSources.add(dataSource)
-```
-
-这样，就可以分组管理实体，比如控制某一组的实体的显示与隐藏：
-
-```js
-dataSource.show = false
-```
-
 ## 图形
 
 ### billboard 广告牌
